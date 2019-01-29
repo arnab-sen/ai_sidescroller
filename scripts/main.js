@@ -64,7 +64,7 @@ class Game {
   }
 }
 
-var REFRESH_RATE = 1000 / 30;
+var REFRESH_RATE = 1000 / 60;
 
 var elements = {
   "mainCanvas" : getElement("#mainCanvas")
