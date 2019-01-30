@@ -5,42 +5,26 @@ class Character {
     this.width = 50;
     this.height= 50;
     this.colour = "rgb(255, 255, 255)";
-    this.distance = 10;
-    this.moving = false;
-    this.direction = null;
+    this.distance = 5;
   }
   
   draw(canvas) {
     var ctx = canvas.getContext("2d");
     ctx.fillStyle = this.colour;
-    if (this.moving) {
-      this.move(this.direction);
-    }
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
   
   move() {
-    if (this.direction == null) return;
-    
-    if (this.direction == "r") {
-      this.x += this.distance;
-    } else if (this.direction == "l") {
-      this.x -= this.distance;
-    } else if (this.direction == "u") {
-      this.y -= this.distance;
-    } else if (this.direction == "d") {
-      this.y += this.distance;
-    }
+    var keyStatus = assets["game"].keyStatus;  
+    if (keyStatus["w"]) this.y -= this.distance;
+    if (keyStatus["a"]) this.x -= this.distance;
+    if (keyStatus["s"]) this.y += this.distance;
+    if (keyStatus["d"]) this.x += this.distance;
   }
   
   moveRandom() {
     var dirs = ["u", "d", "l", "r"];
     this.move(dirs[randomInt(0, 4)]);
-  }
-  
-  stopMoving() {
-    this.moving = false;
-    this.direction = null;
   }
 }
 
@@ -53,6 +37,12 @@ class Game {
     this.backgroundColour = "rgb(0, 15, 50)";
     this.imageData = null;
     this.snapshotCanvas();
+    this.keyStatus = {"w" : false,
+                      "a" : false,
+                      "s" : false,
+                      "d" : false,
+                      "space" : false
+                      };
   }
   
   snapshotCanvas() {
@@ -82,8 +72,8 @@ function setup() {
     setInterval(runGame, REFRESH_RATE);
   }
   
-  document.addEventListener("keydown", keyPress);
-  document.addEventListener("keyup", () => assets["mainCharacter"].stopMoving());
+  document.addEventListener("keydown", e => keyPress(e, down = true));
+  document.addEventListener("keyup", e => keyPress(e, down = false));
   
   
   assets["game"] = new Game(elements["mainCanvas"]);
@@ -104,26 +94,14 @@ function randomInt(low, high) {
   return Math.floor((Math.random() * high) + low);
 }
 
-function keyPress(e) {
-  var key = e.keyCode;
-  var keys = {"w" : 87,
-              "a" : 65,
-              "s" : 83,
-              "d" : 68
+function keyPress(e, down = true) {
+  var keys = {87 : "w",
+              65 : "a",
+              83 : "s",
+              68 : "d"
               };
-              
-  var mc = assets["mainCharacter"];
-  mc.moving = true;
-  
-  if (key == keys["w"]) {
-    mc.direction = "u";
-  } else if (key == keys["a"]) {
-    mc.direction = "l";
-  } else if (key == keys["s"]) {
-    mc.direction = "d";
-  } else if (key == keys["d"]) {
-    mc.direction = "r";
-  }
+  var keyStatus = assets["game"].keyStatus;       
+  keyStatus[keys[e.keyCode]] = down;
 }
 
 function runGame() {
@@ -132,12 +110,21 @@ function runGame() {
   var ctx = canvas.getContext("2d");
   var mc = assets["mainCharacter"];
   game.redrawCanvas();
+  mc.move();
   mc.draw(canvas);
 }
 
 function main() {
   setup();
   runGame();
+  
+  /*
+  TODO:
+    * Add collision detection
+    * Add canvas boundary
+    * Add multi key support
+    * Add jump
+  */
 }
 
 main();
