@@ -10,6 +10,11 @@ class Character {
     this.airborne = false;
   }
   
+  setPosition(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+  
   draw(canvas) {
     var ctx = canvas.getContext("2d");
     ctx.fillStyle = this.colour;
@@ -98,7 +103,8 @@ function setup() {
   
   
   assets["game"] = new Game(elements["mainCanvas"]);
-  assets["mainCharacter"] = new Character(300, 300);
+  assets["mainCharacter"] = new Character();
+  assets["mainCharacter"].setPosition(100, assets["game"].height - assets["mainCharacter"].height); 
 }
 
 
@@ -141,7 +147,7 @@ function main() {
   
   /*
   TODO:
-    * Add jump
+    * Add collision with other objects
   */
 }
 
