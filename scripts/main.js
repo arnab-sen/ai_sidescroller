@@ -21,17 +21,71 @@ class Character {
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
   
-  move(keyStatus = assets["game"].keyStatus) {
-    if (keyStatus["w"] || this.airborne) this.jump();
-    if (keyStatus["a"] && (this.x - this.distance) >= 0) this.x -= this.distance;
-    if (keyStatus["d"] && (this.x + this.width) < assets["game"].width) {
-      this.x += this.distance;
+  isColliding() {
+    var collision = false;
+    
+    for (var i = 0; i < assets["obstacles"].length; i++) {
+      var obs = assets["obstacles"][i];
+      
+      collision = !(obs.x > (this.x + this.width) ||
+                    (obs.x + obs.width) < this.x ||
+                    obs.y > (this.y + this.height) ||
+                    (obs.y + obs.height) < this.y)
+                    
+      if (collision) return true;
     }
+
+    return collision;
+  }
+  
+  collidingLeft() {
+    for (var i = 0; i < assets["obstacles"].length; i++) {
+      var obs = assets["obstacles"][i];
+
+      if ((obs.x + obs.width) >= this.x && obs.x < (this.x + this.width) &&
+        (this.y + this.height > obs.y)) return true;          
+    }
+
+    return false;
+  }
+  
+  collidingRight() {
+    for (var i = 0; i < assets["obstacles"].length; i++) {
+      var obs = assets["obstacles"][i];
+
+      if (obs.x <= (this.x + this.width) && (obs.x + obs.width) > this.x &&
+        (this.y + this.height > obs.y)) return true;          
+    }
+
+    return false;
+  }
+  
+  collidingBottom() {
+    for (var i = 0; i < assets["obstacles"].length; i++) {
+      var obs = assets["obstacles"][i];
+      if ((this.y + this.height) > obs.y) return true;          
+    }
+
+    return false;
+  }
+  
+  move(keyStatus = assets["game"].keyStatus) {
+    var collision = this.isColliding();
+    
+    if (keyStatus["w"] || this.airborne) {
+      this.jump();
+    }
+    
+    if (keyStatus["a"] && (this.x - this.distance) >= 0 && !this.collidingLeft()) 
+      this.x -= this.distance;
+    if (keyStatus["d"] && (this.x + this.width + this.distance) < assets["game"].width &&
+      !this.collidingRight())
+      this.x += this.distance;
   }
   
   moveRandom() {
-    var keys = ["w", "a", "s", "d"];
-    var keyStatus = {"w" : false, "a" : false, "s" : false, "d" : false};
+    var keys = ["w", "a", "d"];
+    var keyStatus = {"w" : false, "a" : false, "d" : false};
     var numKeys = randomInt(0, keys.length);
     for (var i = 0; i < numKeys; i++) {
       keyStatus[keys[randomInt(0, keys.length)]] = true;
@@ -40,14 +94,57 @@ class Character {
   }
   
   jump() {
+    if (this.collidingBottom() && (this.collidingLeft() || this.collidingRight())) {
+      this.airborne = false;
+      this.y += (this.verticalVelocity + assets["game"].gravity);
+      return;
+    }
     if (!this.airborne) this.verticalVelocity = 20;
-    if (this.verticalVelocity < -20) {
+    if ((this.y + this.height) >= assets["game"].height && this.verticalVelocity <= -20) {
       this.airborne = false;
       return;
     }
     this.airborne = true;
-    this.y -= this.verticalVelocity;
-    this.verticalVelocity -= assets["game"].gravity;
+    
+    if (!(this.collidingBottom() && (this.collidingLeft() || this.collidingRight()))) {
+      this.y -= this.verticalVelocity;
+      this.verticalVelocity -= assets["game"].gravity;
+    }
+  }
+}
+
+class Obstacle {
+  constructor(x = 0, y = 0, width = 50, height = 50) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.rgb = [50, 100, 255];
+  }
+  
+  setPosition(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+  
+  setColour(r, g, b) {
+    this.rgb = [r, g, b];
+  }
+  
+  getRGBString(r = this.rgb[0], g = this.rgb[1], b = this.rgb[2]) {
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  
+  addToRender(canvas) {
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = this.getRGBString();
+    assets["game"].addRender(this);
+  }
+  
+  draw(canvas) {
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = this.getRGBString();
+    ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 }
 
@@ -59,6 +156,7 @@ class Game {
     this.height = canvas.height;
     this.backgroundColour = "rgb(0, 15, 50)";
     this.imageData = null;
+    this.itemsToRender = [];
     this.snapshotCanvas();
     this.keyStatus = {"w" : false,
                       "a" : false,
@@ -70,6 +168,15 @@ class Game {
     this.gravity = 1;
   }
   
+  addRender(item) {
+    this.itemsToRender.push(item);
+  }
+  
+  renderAll() {
+    for (var i = 0; i < this.itemsToRender.length; i++) {
+      this.itemsToRender[i].draw(this.canvas);
+    }
+  }
   
   snapshotCanvas() {
     this.imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
@@ -77,6 +184,7 @@ class Game {
   
   redrawCanvas() {
     this.ctx.putImageData(this.imageData, 0, 0);
+    this.renderAll();
   }
 }
 
@@ -87,6 +195,8 @@ var elements = {
 };
 
 var assets = {
+  "mainCharacter" : null,
+  "obstacles" : []
 };
 
 function getElement(name) {
@@ -104,7 +214,11 @@ function setup() {
   
   assets["game"] = new Game(elements["mainCanvas"]);
   assets["mainCharacter"] = new Character();
-  assets["mainCharacter"].setPosition(100, assets["game"].height - assets["mainCharacter"].height); 
+  assets["mainCharacter"].setPosition(100, assets["game"].height - assets["mainCharacter"].height);
+  assets["obstacles"].push(new Obstacle(400, 450)); 
+  for (var i = 0; i < assets["obstacles"].length; i++) {
+    assets["obstacles"][i].addToRender(elements["mainCanvas"]);
+  }
 }
 
 
@@ -136,6 +250,8 @@ function runGame() {
   var canvas = elements["mainCanvas"];
   var ctx = canvas.getContext("2d");
   var mc = assets["mainCharacter"];
+  
+  // Keep the mainCharacter render separate from the rest
   game.redrawCanvas();
   mc.move();
   mc.draw(canvas);
@@ -148,6 +264,7 @@ function main() {
   /*
   TODO:
     * Add collision with other objects
+    * Add movement tracker array
   */
 }
 
