@@ -14,8 +14,7 @@ class Character {
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
   
-  move() {
-    var keyStatus = assets["game"].keyStatus;  
+  move(keyStatus = assets["game"].keyStatus) {
     if (keyStatus["w"] && (this.y - this.distance) >= 0) this.y -= this.distance;
     if (keyStatus["a"] && (this.x - this.distance) >= 0) this.x -= this.distance;
     if (keyStatus["s"] && (this.y + this.height) < assets["game"].height) {
@@ -27,8 +26,13 @@ class Character {
   }
   
   moveRandom() {
-    var dirs = ["u", "d", "l", "r"];
-    this.move(dirs[randomInt(0, 4)]);
+    var keys = ["w", "a", "s", "d"];
+    var keyStatus = {"w" : false, "a" : false, "s" : false, "d" : false};
+    var numKeys = randomInt(0, keys.length);
+    for (var i = 0; i < numKeys; i++) {
+      keyStatus[keys[randomInt(0, keys.length)]] = true;
+    }
+    this.move(keyStatus = keyStatus);
   }
 }
 
