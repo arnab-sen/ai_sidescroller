@@ -16,10 +16,14 @@ class Character {
   
   move() {
     var keyStatus = assets["game"].keyStatus;  
-    if (keyStatus["w"]) this.y -= this.distance;
-    if (keyStatus["a"]) this.x -= this.distance;
-    if (keyStatus["s"]) this.y += this.distance;
-    if (keyStatus["d"]) this.x += this.distance;
+    if (keyStatus["w"] && (this.y - this.distance) >= 0) this.y -= this.distance;
+    if (keyStatus["a"] && (this.x - this.distance) >= 0) this.x -= this.distance;
+    if (keyStatus["s"] && (this.y + this.height) < assets["game"].height) {
+      this.y += this.distance;
+    }
+    if (keyStatus["d"] && (this.x + this.width) < assets["game"].width) {
+      this.x += this.distance;
+    }
   }
   
   moveRandom() {
@@ -120,9 +124,6 @@ function main() {
   
   /*
   TODO:
-    * Add collision detection
-    * Add canvas boundary
-    * Add multi key support
     * Add jump
   */
 }
