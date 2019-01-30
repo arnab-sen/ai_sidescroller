@@ -37,7 +37,7 @@ class Character {
   jump() {
     if (!this.airborne) this.verticalVelocity = 20;
     if (this.verticalVelocity < -20) {
-      this.airborne = falwse;
+      this.airborne = false;
       return;
     }
     this.airborne = true;
