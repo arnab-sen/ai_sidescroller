@@ -6,6 +6,8 @@ class Character {
     this.height= 50;
     this.colour = "rgb(255, 255, 255)";
     this.distance = 5;
+    this.verticalVelocity = 0;
+    this.airborne = false;
   }
   
   draw(canvas) {
@@ -15,11 +17,8 @@ class Character {
   }
   
   move(keyStatus = assets["game"].keyStatus) {
-    if (keyStatus["w"] && (this.y - this.distance) >= 0) this.y -= this.distance;
+    if (keyStatus["w"] || this.airborne) this.jump();
     if (keyStatus["a"] && (this.x - this.distance) >= 0) this.x -= this.distance;
-    if (keyStatus["s"] && (this.y + this.height) < assets["game"].height) {
-      this.y += this.distance;
-    }
     if (keyStatus["d"] && (this.x + this.width) < assets["game"].width) {
       this.x += this.distance;
     }
@@ -34,14 +33,25 @@ class Character {
     }
     this.move(keyStatus = keyStatus);
   }
+  
+  jump() {
+    if (!this.airborne) this.verticalVelocity = 20;
+    if (this.verticalVelocity < -20) {
+      this.airborne = falwse;
+      return;
+    }
+    this.airborne = true;
+    this.y -= this.verticalVelocity;
+    this.verticalVelocity -= assets["game"].gravity;
+  }
 }
 
 class Game {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
-    this.width = 500;
-    this.height = 500;
+    this.width = canvas.width;
+    this.height = canvas.height;
     this.backgroundColour = "rgb(0, 15, 50)";
     this.imageData = null;
     this.snapshotCanvas();
@@ -51,7 +61,10 @@ class Game {
                       "d" : false,
                       "space" : false
                       };
+                      
+    this.gravity = 1;
   }
+  
   
   snapshotCanvas() {
     this.imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
