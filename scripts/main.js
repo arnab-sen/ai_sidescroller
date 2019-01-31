@@ -12,6 +12,7 @@ class Character {
     this.lastMoveIndex = 0;
     this.defaultGroundOffset = this.height;
     this.maxProgress = this.x;
+    this.control = "AI";
   }
   
   setPosition(x, y) {
@@ -116,10 +117,14 @@ class Character {
   }
   
   move(keyStatus = assets["game"].keyStatus) {
-    if (this.x > this.maxProgress) {
-      this.maxProgress = this.x;
-      assets["AI"].maxProgress = this.maxProgress;
-      assets["AI"].generateNewGenePool(100);
+    if (this.control == "AI") {
+      if (this.x > this.maxProgress) {
+        this.maxProgress = this.x;
+        if (this.maxProgress > assets["AI"].maxProgress) { 
+          assets["AI"].maxProgress = this.maxProgress;
+          assets["AI"].generateNewGenePool(100);
+        }
+      }
     }
     
     if (keyStatus["w"]) {
@@ -317,6 +322,8 @@ function setup() {
   
   
   assets["game"] = new Game(elements["mainCanvas"]);
+  assets["mainCharacter"] = new Character(0, assets["game"].height - 50, 50, 50);
+  assets["mainCharacter"].control = "user";
   assets["AI"] = new AIManager();
   var ground = new Obstacle(0, assets["game"].height)
   ground.setDimensions(assets["game"].width, 100);
