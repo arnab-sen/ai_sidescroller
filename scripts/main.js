@@ -8,6 +8,9 @@ class Character {
     this.distance = 5;
     this.verticalVelocity = 0;
     this.airborne = false;
+    this.moves = [this.getRandomMove()];
+    this.nextMove = this.moves[0];
+    this.lastMoveIndex = 0;
   }
   
   setPosition(x, y) {
@@ -84,13 +87,32 @@ class Character {
   }
   
   moveRandom() {
-    var keys = ["w", "a", "d"];
-    var keyStatus = {"w" : false, "a" : false, "d" : false};
-    var numKeys = randomInt(0, keys.length);
-    for (var i = 0; i < numKeys; i++) {
-      keyStatus[keys[randomInt(0, keys.length)]] = true;
+    var nextMove = this.getNextMove();
+    var keyStatus = assets["game"].keyStatus;
+    keyStatus[nextMove["key"]] = nextMove["down"];
+    this.move();
+  }
+  
+  getRandomMove() {
+    var nextMove = {"key" : null, "down" : null};
+    var keys = ["a", "d"];
+    var down = [true, false];
+    
+    nextMove["key"] = keys[randomInt(0, 2)];
+    nextMove["down"] = down[randomInt(0, 2)];
+    
+    return nextMove;
+  }
+  
+  getNextMove() {
+    if (this.lastMoveIndex == this.moves.length) {
+      this.moves.push(this.getRandomMove());
+      return this.moves[this.lastMoveIndex];
+    } else {
+      var nextMove = this.moves[this.lastMoveIndex];
+      this.lastMoveIndex++;
+      return nextMove;
     }
-    this.move(keyStatus = keyStatus);
   }
   
   jump() {
@@ -253,7 +275,7 @@ function runGame() {
   
   // Keep the mainCharacter render separate from the rest
   game.redrawCanvas();
-  mc.move();
+  mc.moveRandom();
   mc.draw(canvas);
 }
 
