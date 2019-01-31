@@ -6,16 +6,25 @@ class Character {
     this.height= 50;
     this.colour = "rgb(255, 255, 255)";
     this.distance = 5;
-    this.verticalVelocity = 0;
+    this.vY = 0;
     this.airborne = false;
     this.moves = [this.getRandomMove()];
     this.nextMove = this.moves[0];
     this.lastMoveIndex = 0;
+    this.defaultGroundOffset = this.height;
   }
   
   setPosition(x, y) {
     this.x = x;
     this.y = y;
+  }
+  
+  getGroundOffset() {
+    return assets["game"].height - this.y;
+  }
+  
+  setGroundOffset(offset) {
+    this.y = assets["game"].height - offset;
   }
   
   draw(canvas) {
@@ -40,9 +49,9 @@ class Character {
 
     return collision;
   }
-  
-  collidingLeft() {
-    for (var i = 0; i < assets["obstacles"].length; i++) {
+
+  collidingLeft(index = 0) {
+    for (var i = index; i < assets["obstacles"].length; i++) {
       var obs = assets["obstacles"][i];
 
       if ((obs.x + obs.width) >= this.x && obs.x < (this.x + this.width) &&
@@ -52,8 +61,8 @@ class Character {
     return false;
   }
   
-  collidingRight() {
-    for (var i = 0; i < assets["obstacles"].length; i++) {
+  collidingRight(index = 0) {
+    for (var i = index; i < assets["obstacles"].length; i++) {
       var obs = assets["obstacles"][i];
 
       if (obs.x <= (this.x + this.width) && (obs.x + obs.width) > this.x &&
@@ -66,23 +75,45 @@ class Character {
   collidingBottom() {
     for (var i = 0; i < assets["obstacles"].length; i++) {
       var obs = assets["obstacles"][i];
-      if ((this.y + this.height) > obs.y) return true;          
+      if ((this.y + this.height) > obs.y && 
+        (this.collidingLeft() || this.collidingRight())) {
+        return true;    
+      }      
     }
 
     return false;
   }
-  
-  move(keyStatus = assets["game"].keyStatus) {
-    var collision = this.isColliding();
     
-    if (keyStatus["w"] || this.airborne) {
-      this.jump();
+  jump() {
+    if (this.collidingBottom()) this.vY = 20; 
+  }
+  
+  applyGravity() {    
+    this.y -= this.vY;
+    if (this.collidingBottom()) {
+      this.y += this.vY;
+      while (!this.collidingBottom()) {
+        this.y += 1;
+      }
+      this.vY = 0;
     }
     
-    if (keyStatus["a"] && (this.x - this.distance) >= 0 && !this.collidingLeft()) 
+    this.vY -= assets["game"].gravity;
+  }
+  
+  move(keyStatus = assets["game"].keyStatus) {
+    
+    if (keyStatus["w"]) {
+      this.jump();
+    }
+    //console.log(this.collidingLeft(), this.collidingRight());
+    this.applyGravity();
+        
+    if (keyStatus["a"] && (this.x - this.distance) >= 0 && 
+      !this.collidingLeft(1)) 
       this.x -= this.distance;
     if (keyStatus["d"] && (this.x + this.width + this.distance) < assets["game"].width &&
-      !this.collidingRight())
+      !this.collidingRight(1))
       this.x += this.distance;
   }
   
@@ -114,25 +145,6 @@ class Character {
       return nextMove;
     }
   }
-  
-  jump() {
-    if (this.collidingBottom() && (this.collidingLeft() || this.collidingRight())) {
-      this.airborne = false;
-      this.y += (this.verticalVelocity + assets["game"].gravity);
-      return;
-    }
-    if (!this.airborne) this.verticalVelocity = 20;
-    if ((this.y + this.height) >= assets["game"].height && this.verticalVelocity <= -20) {
-      this.airborne = false;
-      return;
-    }
-    this.airborne = true;
-    
-    if (!(this.collidingBottom() && (this.collidingLeft() || this.collidingRight()))) {
-      this.y -= this.verticalVelocity;
-      this.verticalVelocity -= assets["game"].gravity;
-    }
-  }
 }
 
 class Obstacle {
@@ -147,6 +159,11 @@ class Obstacle {
   setPosition(x, y) {
     this.x = x;
     this.y = y;
+  }
+  
+  setDimensions(width, height) {
+    this.width = width;
+    this.height = height;
   }
   
   setColour(r, g, b) {
@@ -237,6 +254,10 @@ function setup() {
   assets["game"] = new Game(elements["mainCanvas"]);
   assets["mainCharacter"] = new Character();
   assets["mainCharacter"].setPosition(100, assets["game"].height - assets["mainCharacter"].height);
+  var ground = new Obstacle(0, assets["game"].height)
+  ground.setDimensions(assets["game"].width, 100);
+  assets["obstacles"].push(ground);
+  assets["ground"] = ground;
   assets["obstacles"].push(new Obstacle(400, 450)); 
   for (var i = 0; i < assets["obstacles"].length; i++) {
     assets["obstacles"][i].addToRender(elements["mainCanvas"]);
@@ -275,7 +296,8 @@ function runGame() {
   
   // Keep the mainCharacter render separate from the rest
   game.redrawCanvas();
-  mc.moveRandom();
+  //mc.moveRandom();
+  mc.move();
   mc.draw(canvas);
 }
 
