@@ -7,11 +7,11 @@ class Character {
     this.colour = "rgb(255, 255, 255)";
     this.distance = 5;
     this.vY = 0;
-    this.airborne = false;
     this.moves = [this.getRandomMove()];
     this.nextMove = this.moves[0];
     this.lastMoveIndex = 0;
     this.defaultGroundOffset = this.height;
+    this.maxProgress = this.x;
   }
   
   setPosition(x, y) {
@@ -25,6 +25,19 @@ class Character {
   
   setGroundOffset(offset) {
     this.y = assets["game"].height - offset;
+  }
+  
+  setColour(r, g, b) {
+    this.colour = `rgb(${r}, ${g}, ${b})`;
+  }
+  
+  setMoves(moves) {
+    this.moves = moves;
+    this.lastMoveIndex = 0;
+  }
+  
+  getMoves() {
+    return this.moves;
   }
   
   draw(canvas) {
@@ -55,7 +68,7 @@ class Character {
       var obs = assets["obstacles"][i];
 
       if ((obs.x + obs.width) >= this.x && obs.x < (this.x + this.width) &&
-        (this.y + this.height > obs.y)) return true;          
+        (this.y + this.height > (obs.y))) return true;          
     }
 
     return false;
@@ -66,7 +79,7 @@ class Character {
       var obs = assets["obstacles"][i];
 
       if (obs.x <= (this.x + this.width) && (obs.x + obs.width) > this.x &&
-        (this.y + this.height > obs.y)) return true;          
+        (this.y + this.height > (obs.y))) return true;          
     }
 
     return false;
@@ -92,6 +105,7 @@ class Character {
     this.y -= this.vY;
     if (this.collidingBottom()) {
       this.y += this.vY;
+      this.y -= 1
       while (!this.collidingBottom()) {
         this.y += 1;
       }
@@ -102,11 +116,16 @@ class Character {
   }
   
   move(keyStatus = assets["game"].keyStatus) {
+    if (this.x > this.maxProgress) {
+      this.maxProgress = this.x;
+      assets["AI"].maxProgress = this.maxProgress;
+      assets["AI"].generateNewGenePool(100);
+    }
     
     if (keyStatus["w"]) {
       this.jump();
     }
-    //console.log(this.collidingLeft(), this.collidingRight());
+
     this.applyGravity();
         
     if (keyStatus["a"] && (this.x - this.distance) >= 0 && 
@@ -126,11 +145,11 @@ class Character {
   
   getRandomMove() {
     var nextMove = {"key" : null, "down" : null};
-    var keys = ["a", "d"];
+    var keys = ["w", "a", "d"];
     var down = [true, false];
     
-    nextMove["key"] = keys[randomInt(0, 2)];
-    nextMove["down"] = down[randomInt(0, 2)];
+    nextMove["key"] = keys[randomInt(0, keys.length)];
+    nextMove["down"] = down[randomInt(0, down.length)];
     
     return nextMove;
   }
@@ -227,7 +246,50 @@ class Game {
   }
 }
 
-var REFRESH_RATE = 1000 / 60;
+class AIManager {
+  constructor() {
+    this.characters = []
+    this.createRandomCharacters(1, []);
+    this.numMoves = 0;
+    this.moveThreshold = 100;
+    this.defaultMoveThreshold = this.moveThreshold;
+    this.bestCandidate = this.characters[0];
+    this.maxProgress = this.bestCandidate.x;
+  }
+  
+  createRandomCharacters(numCharacters, moves) {
+    for (var i = 0; i < numCharacters; i++) {
+      var char = new Character();
+      char.setPosition(0, assets["game"].height - char.height);
+      char.setColour(randomInt(0, 256), randomInt(0, 256), randomInt(0, 256));
+      char.setMoves(moves);
+      this.characters.push(char);
+    }
+  }
+  
+  getBestCandidate() {
+    this.maxProgress;
+    var newCandidate = false;
+    for (var i = 0; i < this.characters.length; i++) {
+      if (this.characters[i].x > this.maxProgress) {
+        this.maxProgress = this.characters[i].x;
+        this.bestCandidate = this.characters[i];
+        newCandidate = true;
+      }
+    }
+    return newCandidate;
+  }
+  
+  generateNewGenePool(numCharacters) {
+    if (this.characters[0].moves.length > this.moveThreshold || this.getBestCandidate()) {
+      this.characters = [];
+      this.moveThreshold += this.defaultMoveThreshold;
+      this.createRandomCharacters(numCharacters, this.bestCandidate.moves);
+    }
+  }
+}
+
+var REFRESH_RATE = 1000 / 120;
 
 var elements = {
   "mainCanvas" : getElement("#mainCanvas")
@@ -235,12 +297,15 @@ var elements = {
 
 var assets = {
   "mainCharacter" : null,
+  "allCharacters" : [],
   "obstacles" : []
 };
 
 function getElement(name) {
   return document.querySelector(name);
 }
+
+
 
 function setup() {
   window.onload = () => {
@@ -252,8 +317,7 @@ function setup() {
   
   
   assets["game"] = new Game(elements["mainCanvas"]);
-  assets["mainCharacter"] = new Character();
-  assets["mainCharacter"].setPosition(100, assets["game"].height - assets["mainCharacter"].height);
+  assets["AI"] = new AIManager();
   var ground = new Obstacle(0, assets["game"].height)
   ground.setDimensions(assets["game"].width, 100);
   assets["obstacles"].push(ground);
@@ -292,13 +356,16 @@ function runGame() {
   var game = assets["game"];
   var canvas = elements["mainCanvas"];
   var ctx = canvas.getContext("2d");
-  var mc = assets["mainCharacter"];
+  var characters = assets["AI"].characters;
   
-  // Keep the mainCharacter render separate from the rest
   game.redrawCanvas();
-  //mc.moveRandom();
-  mc.move();
-  mc.draw(canvas);
+
+  for (var i = 0; i < characters.length; i++) {
+    characters[i].moveRandom();
+    characters[i].draw(canvas);
+  }
+  
+  assets["AI"].generateNewGenePool(100);
 }
 
 function main() {
