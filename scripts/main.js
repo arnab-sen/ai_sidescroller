@@ -310,8 +310,6 @@ function getElement(name) {
   return document.querySelector(name);
 }
 
-
-
 function setup() {
   window.onload = () => {
     setInterval(runGame, REFRESH_RATE);
@@ -329,7 +327,13 @@ function setup() {
   ground.setDimensions(assets["game"].width, 100);
   assets["obstacles"].push(ground);
   assets["ground"] = ground;
-  assets["obstacles"].push(new Obstacle(400, 450)); 
+  assets["obstacles"].push(new Obstacle(100, 450));
+  assets["obstacles"].push(new Obstacle(100, 400)); 
+  assets["obstacles"].push(new Obstacle(150, 450));
+  assets["obstacles"].push(new Obstacle(150, 400));
+  assets["obstacles"].push(new Obstacle(200, 400));
+  assets["obstacles"].push(new Obstacle(200, 450));
+
   for (var i = 0; i < assets["obstacles"].length; i++) {
     assets["obstacles"][i].addToRender(elements["mainCanvas"]);
   }
